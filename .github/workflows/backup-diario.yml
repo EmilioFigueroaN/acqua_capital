@@ -23,9 +23,28 @@ jobs:
           FECHA=$(date +'%Y-%m-%d')
           /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" --schema=public --format=custom -f "backup-$FECHA.dump"
 
-      - name: Subir backup como artifact
+      - name: Exportar tablas a CSV
+        env:
+          DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          mkdir -p csv
+          PSQL=/usr/lib/postgresql/17/bin/psql
+          TABLAS=$($PSQL "$DB_URL" -t -A -c "select table_name from information_schema.tables where table_schema='public' and table_type='BASE TABLE';")
+          for TABLA in $TABLAS; do
+            echo "Exportando $TABLA..."
+            $PSQL "$DB_URL" -c "\copy (select * from \"$TABLA\") to 'csv/${TABLA}.csv' with csv header"
+          done
+
+      - name: Subir dump como artifact
         uses: actions/upload-artifact@v4
         with:
-          name: backup-supabase
+          name: backup-supabase-dump
           path: backup-*.dump
+          retention-days: 30
+
+      - name: Subir CSVs como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backup-supabase-csv
+          path: csv/*.csv
           retention-days: 30
