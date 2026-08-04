@@ -9,15 +9,19 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      - name: Instalar cliente postgres
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Instalar cliente postgres 17
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
 
       - name: Hacer dump de la base
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
           FECHA=$(date +'%Y-%m-%d')
-          pg_dump "$DB_URL" --schema=public --format=custom -f "backup-$FECHA.dump"
+          /usr/lib/postgresql/17/bin/pg_dump "$DB_URL" --schema=public --format=custom -f "backup-$FECHA.dump"
 
       - name: Subir backup como artifact
         uses: actions/upload-artifact@v4
